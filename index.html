@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Downloader</title>
+</head>
+<body>
+    <h1>Download Images from Naver</h1>
+    <form id="download-form">
+        <label for="url">Enter Naver URL:</label>
+        <input type="text" id="url" name="url" required>
+        <button type="submit">Download</button>
+    </form>
+    <p id="message"></p>
+
+    <script>
+        document.getElementById('download-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const url = document.getElementById('url').value;
+            const response = await fetch('/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ url: url })
+            });
+            const result = await response.json();
+            document.getElementById('message').innerText = result.message;
+        });
+    </script>
+</body>
+</html>
