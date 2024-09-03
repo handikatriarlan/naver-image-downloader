@@ -3,7 +3,6 @@ import asyncio
 import os
 from downloader import download_images_from_naver
 
-# Tentukan folder tempat index.html berada
 template_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 app = Flask(__name__, template_folder=template_folder)
@@ -19,13 +18,11 @@ def download():
     asyncio.set_event_loop(loop)
     
     try:
-        # Menjalankan download secara asinkron
         title, zip_file_path = loop.run_until_complete(download_images_from_naver(url))
         
         if not title or not zip_file_path:
             return jsonify({'message': 'Error during download process.'}), 500
         
-        # Mengirim file ZIP untuk diunduh
         return send_file(zip_file_path, as_attachment=True, download_name=os.path.basename(zip_file_path))
     
     except Exception as e:

@@ -11,7 +11,7 @@ async def download_images_from_naver(url):
     title, desired_path = await get_page_title_and_folder(url)
     
     if not title or not desired_path:
-        return None, None  # Pastikan untuk menangani kasus di mana pengambilan data gagal
+        return None, None
     
     # Membuat folder sementara untuk menyimpan gambar
     temp_folder = os.path.join(desired_path, f'{title}_temp')
@@ -35,10 +35,8 @@ async def download_images_from_naver(url):
                     if 'src' in linkdata:
                         picture_url = linkdata['src']
                         picture_id = unquote(os.path.basename(urlparse(picture_url).path))
-                        # Hapus karakter yang tidak diinginkan dari nama file
-                        picture_id = re.sub(r'%\d{2}', '', picture_id)  # Hapus %2D, %28, dsb
-                        picture_id = re.sub(r'[<>:"/|?*]', '', picture_id)  # Hapus karakter khusus
-                        # Format nama file baru dengan urutan gambar
+                        picture_id = re.sub(r'%\d{2}', '', picture_id) 
+                        picture_id = re.sub(r'[<>:"/|?*]', '', picture_id)
                         picture_name = f'{os.path.splitext(picture_id)[0]}{os.path.splitext(picture_id)[1]}'
                         picture_path = os.path.join(temp_folder, picture_name)
                         if not os.path.isfile(picture_path):
@@ -51,7 +49,6 @@ async def download_images_from_naver(url):
             if tasks:
                 await asyncio.gather(*tasks)
     
-    # Membuat file zip di folder Downloads
     zip_path = os.path.join(desired_path, f'{title}.zip')
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         for root, _, files in os.walk(temp_folder):
@@ -60,7 +57,6 @@ async def download_images_from_naver(url):
                 arcname = os.path.relpath(file_path, temp_folder)
                 zipf.write(file_path, arcname)
     
-    # Menghapus folder sementara setelah zip dibuat
     for root, dirs, files in os.walk(temp_folder, topdown=False):
         for name in files:
             os.remove(os.path.join(root, name))
@@ -90,12 +86,10 @@ async def get_page_title_and_folder(url):
                 raise Exception(f'Error {response.status} while accessing {url}')
             text = await response.text()
             soup = BeautifulSoup(text, 'html.parser')
-            title = soup.title.string.strip()  # Mengambil judul dari tag <title>
-            # Menentukan nama folder berdasarkan judul
-            title = re.sub(r'[<>:"/|?*]', '', title)  # Membersihkan karakter khusus
-            # Menggunakan variabel lingkungan untuk path home yang sesuai
+            title = soup.title.string.strip()
+            title = re.sub(r'[<>:"/|?*]', '', title) 
             home_dir = os.path.expanduser('~')
-            desired_path = os.path.join(home_dir, 'Downloads')  # Folder Downloads di direktori home
+            desired_path = os.path.join(home_dir, 'Downloads')
             return title, desired_path
 
 def main():
