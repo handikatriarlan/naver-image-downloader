@@ -1,8 +1,7 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, render_template, request, send_file, jsonify
 import asyncio
-from downloader import download_images_from_naver
-import threading
 import os
+from downloader import download_images_from_naver
 
 # Tentukan folder tempat index.html berada
 template_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -15,23 +14,26 @@ def index():
 
 @app.route('/download', methods=['POST'])
 def download():
-    url = request.form.get('url')
-    if not url:
-        return jsonify({'message': 'No URL provided'}), 400
+    url = request.form['url']
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        # Menjalankan download secara asinkron
+        title, zip_file_path = loop.run_until_complete(download_images_from_naver(url))
+        
+        if not title or not zip_file_path:
+            return jsonify({'message': 'Error during download process.'}), 500
+        
+        # Mengirim file ZIP untuk diunduh
+        return send_file(zip_file_path, as_attachment=True, download_name=os.path.basename(zip_file_path))
+    
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
 
-    def run_download():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(download_images_from_naver(url))
-        except Exception as e:
-            print(f'An error occurred: {e}')
-
-    # Run download in a separate thread
-    thread = threading.Thread(target=run_download)
-    thread.start()
-
-    return jsonify({'message': 'Download started!'})
+@app.route('/status', methods=['GET'])
+def status():
+    return jsonify({'message': 'Download completed!'})
 
 if __name__ == '__main__':
     app.run(debug=True)

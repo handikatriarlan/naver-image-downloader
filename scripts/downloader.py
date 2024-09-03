@@ -3,16 +3,20 @@ import aiohttp
 import asyncio
 import json
 import re
+import zipfile
 from urllib.parse import urlparse, unquote
 from bs4 import BeautifulSoup
 
 async def download_images_from_naver(url):
-    # Menentukan jalur folder di "C:\Users\handi\Downloads"
     title, desired_path = await get_page_title_and_folder(url)
     
-    # Membuat folder jika belum ada
-    os.makedirs(desired_path, exist_ok=True)
-    print(f"Images will be saved to: {desired_path}")
+    if not title or not desired_path:
+        return None, None  # Pastikan untuk menangani kasus di mana pengambilan data gagal
+    
+    # Membuat folder sementara untuk menyimpan gambar
+    temp_folder = os.path.join(desired_path, f'{title}_temp')
+    os.makedirs(temp_folder, exist_ok=True)
+    print(f"Images will be saved to: {temp_folder}")
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0',
@@ -22,7 +26,7 @@ async def download_images_from_naver(url):
         async with session.get(url) as response:
             if response.status != 200:
                 print(f'Error {response.status} while accessing {url}')
-                return
+                return None, None
             text = await response.text()
             tasks = []
             for item in text.split("data-linkdata=\'")[1:]:
@@ -36,7 +40,7 @@ async def download_images_from_naver(url):
                         picture_id = re.sub(r'[<>:"/|?*]', '', picture_id)  # Hapus karakter khusus
                         # Format nama file baru dengan urutan gambar
                         picture_name = f'{os.path.splitext(picture_id)[0]}{os.path.splitext(picture_id)[1]}'
-                        picture_path = os.path.join(desired_path, picture_name)
+                        picture_path = os.path.join(temp_folder, picture_name)
                         if not os.path.isfile(picture_path):
                             tasks.append(download(session, picture_url, picture_path))
                     else:
@@ -46,6 +50,26 @@ async def download_images_from_naver(url):
             
             if tasks:
                 await asyncio.gather(*tasks)
+    
+    # Membuat file zip di folder Downloads
+    zip_path = os.path.join(desired_path, f'{title}.zip')
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for root, _, files in os.walk(temp_folder):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, temp_folder)
+                zipf.write(file_path, arcname)
+    
+    # Menghapus folder sementara setelah zip dibuat
+    for root, dirs, files in os.walk(temp_folder, topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+    os.rmdir(temp_folder)
+    
+    print(f'Images have been zipped and saved to: {zip_path}')
+    return title, zip_path
 
 async def download(session, picture_url, picture_path):
     async with session.get(picture_url) as r:
@@ -69,7 +93,9 @@ async def get_page_title_and_folder(url):
             title = soup.title.string.strip()  # Mengambil judul dari tag <title>
             # Menentukan nama folder berdasarkan judul
             title = re.sub(r'[<>:"/|?*]', '', title)  # Membersihkan karakter khusus
-            desired_path = os.path.join(r'C:\Users\handi\Downloads', title)
+            # Menggunakan variabel lingkungan untuk path home yang sesuai
+            home_dir = os.path.expanduser('~')
+            desired_path = os.path.join(home_dir, 'Downloads')  # Folder Downloads di direktori home
             return title, desired_path
 
 def main():
