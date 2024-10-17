@@ -4,20 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
-<body>
-    <h1>Download Images from Naver</h1>
-    <form id="download-form">
-        <label for="url">Enter Naver URL:</label>
-        <input type="text" id="url" name="url" required>
-        <button type="submit">Download</button>
-    </form>
-    <p id="message"></p>
+<body class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-screen flex justify-center items-center">
+    <div class="max-w-md w-full mx-auto p-6 bg-white rounded-xl shadow-lg transform transition duration-500 hover:scale-105">
+        <h1 class="text-4xl font-extrabold mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+            Naver Image Downloader
+        </h1>
+        <form id="download-form" class="space-y-4">
+            <div class="relative">
+                <label for="url" class="text-sm font-medium mb-1 text-gray-600">Enter Naver URL:</label>
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i class="fas fa-link text-gray-400"></i>
+                </div>
+                <input type="text" id="url" name="url" placeholder="https://naver.me/example" required 
+                    class="p-3 pl-10 w-full text-sm text-gray-700 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            <button type="submit" 
+                class="w-full flex justify-center items-center bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 ease-in-out">
+                <i class="fas fa-download mr-2"></i> Download Now
+            </button>
+        </form>
+
+        <!-- Message Output -->
+        <p id="message" class="text-md font-medium mt-6 text-center text-gray-700"></p>
+    </div>
 
     <script>
         document.getElementById('download-form').addEventListener('submit', async function(event) {
             event.preventDefault();
             const url = document.getElementById('url').value;
+            const messageElem = document.getElementById('message');
+            messageElem.innerText = "Downloading... Please wait.";
+            
             const response = await fetch('/download', {
                 method: 'POST',
                 headers: {
@@ -26,7 +46,12 @@
                 body: new URLSearchParams({ url: url })
             });
             const result = await response.json();
-            document.getElementById('message').innerText = result.message;
+            
+            if (result.zip_file) {
+                messageElem.innerHTML = `${result.message} <br><a href="/downloads/${result.zip_file}" class="text-blue-500 underline">Download ZIP</a>`;
+            } else {
+                messageElem.innerText = result.message;
+            }
         });
     </script>
 </body>
